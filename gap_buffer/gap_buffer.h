@@ -28,16 +28,16 @@
 typedef struct GapBuffer {
   size_t          gap_end;
   size_t          gap_start;
-  ptrdiff_t       gap_count;
-  ptrdiff_t       buffer_size;
+  size_t          gap_count;
+  size_t          buffer_size;
 
   char*           data;
 } GapBuffer;
 
-GBAPI GapBuffer gap_buffer_create(const ptrdiff_t gap_size);
+GBAPI GapBuffer gap_buffer_create(const size_t gap_size);
 GBAPI void gap_buffer_free(GapBuffer* gap_buffer);
 GBAPI void gap_buffer_insert(GapBuffer* gap_buffer, const char* str, const size_t position);
-GBAPI void gap_buffer_delete(GapBuffer* gap_buffer, const size_t position, const ptrdiff_t bytes);
+GBAPI void gap_buffer_delete(GapBuffer* gap_buffer, const size_t position, const size_t bytes);
 
 #if defined(GAP_BUFFER_IMPLEMENTATION)
 
@@ -49,7 +49,7 @@ GBAPI static void _gap_buffer_shift_gap_position(GapBuffer* gap_buffer, const si
     abort();                                          \
   }
 
-GapBuffer gap_buffer_create(const ptrdiff_t gap_size)
+GapBuffer gap_buffer_create(const size_t gap_size)
 {
   GapBuffer gap_buffer = {
     .gap_end        = gap_size-1,
@@ -76,10 +76,8 @@ void gap_buffer_free(GapBuffer* gap_buffer)
 void gap_buffer_insert(GapBuffer* gap_buffer, const char* str, const size_t position)
 {
   const size_t str_size = strlen(str);
-  ft_assert(position > gap_count, 
+  ft_assert(position > gap_buffer->gap_count, 
       "gap_buffer_insert -> Position greater than string_count");
-  ft_assert(position < 0, 
-      "gap_buffer_insert -> Negative position");
 
   while (gap_buffer->gap_count + 2 * (str_size+1) >= gap_buffer->buffer_size) {
     _gap_buffer_shift_gap_position(gap_buffer, gap_buffer->gap_count);
@@ -97,7 +95,7 @@ void gap_buffer_insert(GapBuffer* gap_buffer, const char* str, const size_t posi
   gap_buffer->gap_count += str_size;
 }
 
-void gap_buffer_delete(GapBuffer* gap_buffer, const size_t position, const ptrdiff_t bytes)
+void gap_buffer_delete(GapBuffer* gap_buffer, const size_t position, const size_t bytes)
 {
   const size_t total_bytes = gap_buffer->buffer_size - position;
   ft_assert(total_bytes < bytes, 
@@ -111,15 +109,13 @@ void gap_buffer_delete(GapBuffer* gap_buffer, const size_t position, const ptrdi
 static void _gap_buffer_shift_gap_position(GapBuffer* buffer, const size_t position)
 {
   if (position == buffer->gap_start) return;
-  ft_assert(position < 0,
-      "_gap_buffer_shift_gap_position -> negative position from gap_buffer_insert bug");
 
-  const size_t delta = abs((buffer->gap_start - position) * sizeof(char));
+  const size_t delta = (buffer->gap_start - position) * sizeof(char);
   if (position < buffer->gap_start) {
     memmove(buffer->data + buffer->gap_end - delta, buffer->data + position, delta);
     buffer->gap_end -= delta;
   } else {
-    memmove(buffer->data + buffer->gap_start, buffer->data + buffer->gap_end, delta);
+    memmove(buffer->data + buffer->gap_start, buffer->data + buffer->gap_end, -delta);
     buffer->gap_end += delta;
   }
   
